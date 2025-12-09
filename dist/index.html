@@ -1,1 +1,50 @@
-hi. name's yulian. i genuinely hate programming. well to be fair, i hate everything and everyone.<br>anyways, i have 2 years of rust experience.<br>discord: yuvlian<br>email: yuvlian@naver.com
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ligma page</title>
+  <link rel="stylesheet" href="ballpit.css">
+</head>
+
+<body>
+  <div id="controls-container">
+    <div id="controls-header">
+      <button id="minimize-btn">_</button>
+    </div>
+
+    <div id="controls">
+      <div>
+        <button id="toggle" data-paused="false"></button>
+        <button id="clear"></button>
+        <button id="addBig"></button>
+        <button id="resetPegs"></button>
+      </div>
+
+      <label id="label-gravity">
+        <div class="slider-container">
+          <span id="gravVal" class="slider-value"></span>
+          <input type="range" id="gravity" min="0" max="5" step="0.05">
+        </div>
+      </label>
+      <label id="label-rest">
+        <div class="slider-container">
+          <span id="restVal" class="slider-value"></span>
+          <input type="range" id="rest" min="0" max="1" step="0.01">
+        </div>
+      </label>
+      <label id="label-rate">
+        <div class="slider-container">
+          <span id="rateVal" class="slider-value"></span>
+          <input type="range" id="rate" min="0" max="100" step="1">
+        </div>
+      </label>
+      <div id="note"></div>
+    </div>
+  </div>
+
+  <div id="canvas-holder"></div>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+  <script src="ballpit.js"></script>
+</body>
+
+</html>
