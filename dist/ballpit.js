@@ -1,3 +1,5 @@
+// https://github.com/yuvlian/yvl.my.id/blob/main/LICENSE
+
 (function () {
     const BALL_COLORS = ['#ff7b7b', '#ffd47f', '#7bf0a1', '#7bdcff', '#c9a7ff', '#ffd0f0', '#f6ff7b'];
 
@@ -17,7 +19,12 @@
         GRAVITY: 'gravity:',
         RESTITUTION: 'restitution:',
         RATE: 'balls per sec:',
-        NOTE: 'click 4 ball, hold click 4 drag, big ball kill pegs'
+        NOTES: [
+            '- clicking will create ball',
+            '- hold click ball for drag',
+            '- big ball kill pegs',
+            '- resetting pegs also fixes collisions',
+        ]
     };
 
     const CONFIG = {
@@ -63,7 +70,7 @@
         document.getElementById('clear').textContent = TEXT.CLEAR;
         document.getElementById('addBig').textContent = TEXT.ADD_BIG;
         document.getElementById('resetPegs').textContent = TEXT.RESET_PEGS;
-        document.getElementById('note').textContent = TEXT.NOTE;
+        document.getElementById('note').innerHTML = TEXT.NOTES.join('<br>');
         document.getElementById('label-gravity').insertAdjacentHTML('afterbegin', TEXT.GRAVITY);
         document.getElementById('label-rest').insertAdjacentHTML('afterbegin', TEXT.RESTITUTION);
         document.getElementById('label-rate').insertAdjacentHTML('afterbegin', TEXT.RATE);
@@ -340,7 +347,7 @@
         const minimizeBtn = document.getElementById('minimize-btn');
         minimizeBtn.addEventListener('click', function () {
             const isMinimized = controlsDiv.classList.toggle('minimized');
-            minimizeBtn.textContent = isMinimized ? '☐' : '_';
+            minimizeBtn.textContent = isMinimized ? 'O' : '_';
             minimizeBtn.title = isMinimized ? TEXT.TOGGLE_RESUME : TEXT.TOGGLE_PAUSE;
         });
     }
