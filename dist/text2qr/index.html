@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>text2qr</title>
+    <meta property="og:title" content="Text2QR">
+    <meta property="og:description" content="Simple QR generator tool with color customization with no ads, all client sided.">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="color"],
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="color"] {
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #006cff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #qrBox {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <noscript>
+        <div class="box" style="
+            margin-bottom: 15px;
+            background: #ffe5e5;
+            color: #7a0000;
+            border-left: 5px solid red;
+        ">
+            JavaScript is required to use this page.
+        </div>
+    </noscript>
+
+    <div class="box">
+        <h2>text2qr</h2>
+
+        <input id="qrContent" type="text" placeholder="QR Code Content">
+        <input id="qrW" type="number" placeholder="Width (default: 512)">
+        <input id="qrH" type="number" placeholder="Height (default: 512)">
+
+        <label style="display:block; text-align:left; margin-top:10px; font-size:14px;">QR Color</label>
+        <input id="qrColor" type="color" value="#000000">
+
+        <label style="display:block; text-align:left; margin-top:10px; font-size:14px;">Background Color</label>
+        <input id="qrBg" type="color" value="#ffffff">
+
+        <button id="makeQrBtn">Generate QR</button>
+        <button id="saveQrBtn">Save QR</button>
+
+        <div id="qrBox"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+    <script>
+        const qrBox = document.getElementById("qrBox");
+        const makeBtn = document.getElementById("makeQrBtn");
+        const saveBtn = document.getElementById("saveQrBtn");
+        let currentCanvas = null;
+
+        makeBtn.onclick = () => {
+            const content = document.getElementById("qrContent").value.trim();
+            let w = parseInt(document.getElementById("qrW").value);
+            let h = parseInt(document.getElementById("qrH").value);
+
+            const fg = document.getElementById("qrColor").value;
+            const bg = document.getElementById("qrBg").value;
+
+            if (!content) {
+                alert("QR content cannot be empty.");
+                return;
+            }
+
+            if (!w || w <= 0) w = 512;
+            if (!h || h <= 0) h = 512;
+
+            qrBox.innerHTML = "";
+            currentCanvas = null;
+
+            const qr = new QRCode(qrBox, {
+                text: content,
+                width: w,
+                height: h,
+                colorDark: fg,
+                colorLight: bg
+            });
+
+            setTimeout(() => {
+                const img = qrBox.querySelector('img');
+                const canvas = qrBox.querySelector('canvas');
+
+                if (canvas) currentCanvas = canvas;
+                else if (img) {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    const ctx = tempCanvas.getContext('2d');
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        ctx.drawImage(tempImg, 0, 0, w, h);
+                        currentCanvas = tempCanvas;
+                    };
+                    tempImg.src = img.src;
+                }
+
+            }, 300);
+        };
+
+        saveBtn.onclick = () => {
+            if (!currentCanvas) {
+                alert("Generate a QR first!");
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.download = 'qr.png';
+            link.href = currentCanvas.toDataURL();
+            link.click();
+        };
+    </script>
+
+</body>
+
+</html>

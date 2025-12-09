@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>img2pdf</title>
+    <meta property="og:title" content="Img2PDF">
+    <meta property="og:description" content="Simple tool with no ads to bundle images into a single pdf, all client sided.">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        button,
+        input[type="file"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        button {
+            background: #006cff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #fileList {
+            margin: 5px 0 15px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .box {
+                padding: 15px;
+            }
+
+            button,
+            input[type="text"] {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <noscript>
+        <div class="box" style="
+            margin-bottom:15px;
+            background:#ffe5e5;
+            color:#7a0000;
+            border-left:5px solid red;
+        ">
+            JavaScript is required to use this page.
+        </div>
+    </noscript>
+
+    <div class="box">
+        <h2>img2pdf</h2>
+
+        <button id="pickBtn">Select Images</button>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+
+        <p id="fileList"></p>
+
+        <input type="text" id="pdfName" placeholder="MyFileName">
+
+        <button id="makePdfBtn">Generate PDF</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+
+    <script>
+        const pickBtn = document.getElementById("pickBtn");
+        const fileInput = document.getElementById("fileInput");
+        const fileList = document.getElementById("fileList");
+        const makePdfBtn = document.getElementById("makePdfBtn");
+
+        let selectedFiles = [];
+
+        pickBtn.onclick = () => fileInput.click();
+
+        fileInput.onchange = () => {
+            selectedFiles = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+
+            if (selectedFiles.length === 0) {
+                fileList.textContent = "No valid images selected.";
+                return;
+            }
+
+            fileList.textContent = selectedFiles.length + " image(s) selected";
+        };
+
+        makePdfBtn.onclick = async () => {
+            if (selectedFiles.length === 0) {
+                alert("Please select at least one image.");
+                return;
+            }
+
+            let name = document.getElementById("pdfName").value.trim();
+            if (!name) name = "output";
+            name += ".pdf";
+
+            const pdfDoc = await PDFLib.PDFDocument.create();
+
+            for (const file of selectedFiles) {
+                const bytes = await file.arrayBuffer();
+                const image = file.type === "image/png"
+                    ? await pdfDoc.embedPng(bytes)
+                    : await pdfDoc.embedJpg(bytes);
+
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = name;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        };
+    </script>
+
+</body>
+
+</html>
