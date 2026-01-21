@@ -19,7 +19,7 @@ const Dialogues = {
     YourFuneral: "Your funeral.",
     JustKidding: "Just kidding. It's just a portofolio website. I'm not that good at frontend so I thought I'd just make mine a visual novel, since I like those alot.",
     Projects: "Yeah. My CV is <a href='#' style='color: #8ab4f8; text-decoration: none;'>here</a> and list of projects that I'm proud of is <a href='#' style='color: #8ab4f8; text-decoration: none;'>here</a>. Of course, you can always browse my GitHub profile.",
-    Contact: "If you stumble upon 'yuvlian' online—aside from LinkedIn—it's likely me. That's my username on <a href='https://github.com/yuvlian' target='_blank' style='color: #8ab4f8; text-decoration: none;'>GitHub</a> and <a href='https://discord.com/users/876725552474644490' target='_blank' style='color: #8ab4f8; text-decoration: none;'>Discord</a>. Or, feel free to drop me an <a href='mailto:hello@example.com' style='color: #8ab4f8; text-decoration: none;'>email</a>.",
+    Contact: "If you stumble upon 'yuvlian' online—aside from LinkedIn—it's likely me. That's my username on <a href='https://github.com/yuvlian' target='_blank' style='color: #8ab4f8; text-decoration: none;'>GitHub</a> and <a href='https://discord.com/users/876725552474644490' target='_blank' style='color: #8ab4f8; text-decoration: none;'>Discord</a>. Or, feel free to drop me an <a href='mailto:yuvlian@naver.com' style='color: #8ab4f8; text-decoration: none;'>email</a>.",
     Prompt: "&lt;Ask Something&gt;",
     AskElse: "<Ask Something Else>",
     GithubProfile: "GitHub profile?"
