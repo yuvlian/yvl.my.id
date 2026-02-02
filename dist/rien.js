@@ -15,7 +15,7 @@ const Dialogues = {
     Welcome: "Yo. Welcome.",
     Me: "Me?",
     Dunno: "I dunno. I don't know myself that well.",
-    LikeRust: "I like rust-lang and visual novels. Don't know how to explain myself beyond that.",
+    LikeRust: "I like rust-lang and visual novels. I'm also a part of <a href='https://neonteam.dev' style='color: #8ab4f8; text-decoration: none;'>NeonTeam</a> and <a href='https://lethelc.site' style='color: #8ab4f8; text-decoration: none;'>Lethe</a>. Don't know how to explain myself beyond that.",
     YourFuneral: "Your funeral.",
     JustKidding: "Just kidding. It's just a portofolio website. I'm not that good at frontend so I thought I'd just make mine a visual novel, since I like those alot.",
     Projects: "Yeah. My CV is <a href='#' style='color: #8ab4f8; text-decoration: none;'>here</a> and list of projects that I'm proud of is <a href='#' style='color: #8ab4f8; text-decoration: none;'>here</a>. Of course, you can always browse my GitHub profile.",
