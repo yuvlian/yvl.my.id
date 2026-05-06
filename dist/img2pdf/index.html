@@ -255,6 +255,28 @@
             renderImageList();
         };
 
+        async function convertToPng(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            blob.arrayBuffer().then(resolve);
+                        } else {
+                            reject(new Error("Canvas toBlob failed"));
+                        }
+                    }, "image/png");
+                };
+                img.onerror = () => reject(new Error("Failed to load image for conversion"));
+                img.src = url;
+            });
+        }
+
         makePdfBtn.onclick = async () => {
             if (selectedFiles.length === 0) {
                 alert("Please select at least one image.");
@@ -272,10 +294,26 @@
                 const pdfDoc = await PDFLib.PDFDocument.create();
 
                 for (const item of selectedFiles) {
-                    const bytes = await item.file.arrayBuffer();
-                    const image = item.file.type === "image/png"
-                        ? await pdfDoc.embedPng(bytes)
-                        : await pdfDoc.embedJpg(bytes);
+                    let bytes = await item.file.arrayBuffer();
+                    let image;
+
+                    const type = item.file.type.toLowerCase();
+                    const name = item.file.name.toLowerCase();
+                    const isPng = type === "image/png" || name.endsWith(".png");
+                    const isJpg = type === "image/jpeg" || type === "image/jpg" || name.endsWith(".jpg") || name.endsWith(".jpeg");
+
+                    try {
+                        if (isPng) {
+                            image = await pdfDoc.embedPng(bytes);
+                        } else if (isJpg) {
+                            image = await pdfDoc.embedJpg(bytes);
+                        } else {
+                            throw new Error("Unsupported format");
+                        }
+                    } catch (e) {
+                        const pngBytes = await convertToPng(item.preview);
+                        image = await pdfDoc.embedPng(pngBytes);
+                    }
 
                     const naturalWidth = image.width;
                     const naturalHeight = image.height;
