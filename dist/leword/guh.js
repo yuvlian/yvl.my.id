@@ -114,26 +114,28 @@ window.WordleFilter = {
   reset: resetConstraints,
 };
 
-const gridEl = document.getElementById("grid");
+const inputsContainer = document.getElementById("inputs-container");
 const listEl = document.getElementById("wordList");
 const countEl = document.getElementById("count");
 
 const constraints = WordleFilter.create();
-const tiles = [];
-
+const rows = [];
 const COLORS = ["gray", "yellow", "green"];
 
 function updateResults() {
     WordleFilter.reset(constraints);
 
-    for (let row = 0; row < 6; row++) {
-        const guess = [];
-        const colors = [];
+    for (let i = 0; i < 6; i++) {
+        const row = rows[i];
+        const val = row.input.value.toUpperCase();
+        if (val.length === 0) continue;
 
-        for (let col = 0; col < 5; col++) {
-            const tile = tiles[row][col];
-            guess.push(tile.input.value || null);
-            colors.push(tile.color);
+        const guess = Array(5).fill(null);
+        const colors = Array(5).fill("gray");
+
+        for (let j = 0; j < 5; j++) {
+            guess[j] = val[j] || null;
+            colors[j] = row.boxes[j].dataset.color;
         }
 
         WordleFilter.applyGuess(constraints, guess, colors);
@@ -144,45 +146,64 @@ function updateResults() {
     listEl.textContent = valid.join(" ");
 }
 
-let selectedTile = null;
+for (let i = 0; i < 6; i++) {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "row";
 
-for (let row = 0; row < 6; row++) {
-    tiles[row] = [];
-    for (let col = 0; col < 5; col++) {
-        const tile = document.createElement("div");
-        tile.className = "tile gray";
-        tile.color = "gray";
+    const input = document.createElement("input");
+    input.className = "word-input";
+    input.maxLength = 5;
+    input.placeholder = `Guess ${i + 1}`;
 
-        const input = document.createElement("input");
-        input.maxLength = 1;
+    const colorGrid = document.createElement("div");
+    colorGrid.className = "color-grid";
 
-        input.addEventListener("input", () => {
-            input.value = input.value.toUpperCase();
+    const boxes = [];
+    for (let j = 0; j < 5; j++) {
+        const box = document.createElement("div");
+        box.className = "color-box gray";
+        box.dataset.color = "gray";
+
+        box.addEventListener("click", () => {
+            const curIndex = COLORS.indexOf(box.dataset.color);
+            const nextIndex = (curIndex + 1) % COLORS.length;
+            const nextColor = COLORS[nextIndex];
+            
+            box.dataset.color = nextColor;
+            box.className = `color-box ${nextColor}`;
             updateResults();
         });
 
-        tile.addEventListener("click", () => {
-            if (selectedTile) {
-                selectedTile.tile.classList.remove("selected");
-            }
-            tile.classList.add("selected");
-            selectedTile = tiles[row][col];
-        });
-
-        tile.appendChild(input);
-        gridEl.appendChild(tile);
-
-        tiles[row][col] = { tile, input, color: tile.color };
+        colorGrid.appendChild(box);
+        boxes.push(box);
     }
-}
 
-document.querySelectorAll(".color-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        if (!selectedTile) return;
-
-        const color = btn.dataset.color;
-        selectedTile.color = color;
-        selectedTile.tile.className = `tile ${color} selected`;
+    input.addEventListener("input", () => {
+        input.value = input.value.toUpperCase().replace(/[^A-Z]/g, "");
+        const val = input.value;
+        boxes.forEach((box, idx) => {
+            box.textContent = val[idx] || "";
+        });
         updateResults();
     });
-});
+
+    rowDiv.appendChild(input);
+    rowDiv.appendChild(colorGrid);
+    inputsContainer.appendChild(rowDiv);
+
+    rows.push({ input, boxes });
+}
+
+window.resetAll = () => {
+    rows.forEach(row => {
+        row.input.value = "";
+        row.boxes.forEach(box => {
+            box.dataset.color = "gray";
+            box.className = "color-box gray";
+            box.textContent = "";
+        });
+    });
+    updateResults();
+};
+
+updateResults();

@@ -5,47 +5,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>text2qr</title>
-    <meta property="og:title" content="Text2QR">
-    <meta property="og:description" content="Simple QR generator tool with color customization with no ads, all client sided.">
+    <meta property="og:title" content="Text2qr">
+    <meta property="og:description" content="Simple QR code generator with no ads, all client sided.">
     <style>
         body {
             font-family: sans-serif;
             margin: 0;
             padding: 20px;
             background: #f2f2f2;
-            display: flex;
-            justify-content: center;
+        }
+
+        .box {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
 
         * {
             box-sizing: border-box;
         }
 
-        .box {
+        input,
+        button,
+        select {
             width: 100%;
-            max-width: 500px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="color"],
-        button {
-            width: 100%;
-            padding: 12px;
+            padding: 10px;
+            margin: 8px 0;
             border-radius: 8px;
-            margin: 10px 0;
-            font-size: 16px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="color"] {
             border: 1px solid #ccc;
+            font-size: 16px;
         }
 
         button {
@@ -53,11 +44,18 @@
             color: white;
             border: none;
             cursor: pointer;
-            transition: opacity 0.2s;
         }
 
-        button:hover {
-            opacity: 0.9;
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
         }
 
         #qrBox {
@@ -65,37 +63,65 @@
             display: flex;
             justify-content: center;
         }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .box {
+                padding: 15px;
+            }
+
+            input,
+            button,
+            select {
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
     <noscript>
-        <div class="box" style="
-            margin-bottom: 15px;
-            background: #ffe5e5;
-            color: #7a0000;
-            border-left: 5px solid red;
-        ">
+        <div class="box" style="background:#ffe5e5; color:#7a0000; border-left:5px solid red; margin-bottom: 20px;">
             JavaScript is required to use this page.
         </div>
     </noscript>
 
     <div class="box">
-        <h2>text2qr</h2>
+        <h2>Text2qr</h2>
+        <label>Generate QR codes from text, all client-sided.</label>
+        <hr style="margin:20px 0;opacity:0.3;">
 
-        <input id="qrContent" type="text" placeholder="QR Code Content">
-        <input id="qrW" type="number" placeholder="Width (default: 512)">
-        <input id="qrH" type="number" placeholder="Height (default: 512)">
+        <label for="qrContent">QR Code Content</label>
+        <input id="qrContent" type="text" placeholder="your-text-here">
 
-        <label style="display:block; text-align:left; margin-top:10px; font-size:14px;">QR Color</label>
-        <input id="qrColor" type="color" value="#000000">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <label for="qrW">Width</label>
+                <input id="qrW" type="number" placeholder="512">
+            </div>
+            <div>
+                <label for="qrH">Height</label>
+                <input id="qrH" type="number" placeholder="512">
+            </div>
+        </div>
 
-        <label style="display:block; text-align:left; margin-top:10px; font-size:14px;">Background Color</label>
-        <input id="qrBg" type="color" value="#ffffff">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <label for="qrColor">QR Color</label>
+                <input id="qrColor" type="color" value="#000000" style="height:44px;">
+            </div>
+            <div>
+                <label for="qrBg">Background</label>
+                <input id="qrBg" type="color" value="#ffffff" style="height:44px;">
+            </div>
+        </div>
 
-        <button id="makeQrBtn">Generate QR</button>
-        <button id="saveQrBtn">Save QR</button>
+        <button id="previewBtn">Preview QR</button>
+        <button id="downloadBtn">Download QR</button>
 
         <div id="qrBox"></div>
     </div>
@@ -104,68 +130,75 @@
 
     <script>
         const qrBox = document.getElementById("qrBox");
-        const makeBtn = document.getElementById("makeQrBtn");
-        const saveBtn = document.getElementById("saveQrBtn");
-        let currentCanvas = null;
+        const previewBtn = document.getElementById("previewBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
 
-        makeBtn.onclick = () => {
+        function getParams() {
             const content = document.getElementById("qrContent").value.trim();
             let w = parseInt(document.getElementById("qrW").value);
             let h = parseInt(document.getElementById("qrH").value);
-
             const fg = document.getElementById("qrColor").value;
             const bg = document.getElementById("qrBg").value;
 
             if (!content) {
                 alert("QR content cannot be empty.");
-                return;
+                return null;
             }
 
             if (!w || w <= 0) w = 512;
             if (!h || h <= 0) h = 512;
 
-            qrBox.innerHTML = "";
-            currentCanvas = null;
+            return { content, w, h, fg, bg };
+        }
 
-            const qr = new QRCode(qrBox, {
-                text: content,
-                width: w,
-                height: h,
-                colorDark: fg,
-                colorLight: bg
+        previewBtn.onclick = () => {
+            const params = getParams();
+            if (!params) return;
+
+            qrBox.innerHTML = "";
+            new QRCode(qrBox, {
+                text: params.content,
+                width: 460,
+                height: 460,
+                colorDark: params.fg,
+                colorLight: params.bg
+            });
+        };
+
+        downloadBtn.onclick = () => {
+            const params = getParams();
+            if (!params) return;
+
+            const tempDiv = document.createElement("div");
+            const qr = new QRCode(tempDiv, {
+                text: params.content,
+                width: params.w,
+                height: params.h,
+                colorDark: params.fg,
+                colorLight: params.bg
             });
 
             setTimeout(() => {
-                const img = qrBox.querySelector('img');
-                const canvas = qrBox.querySelector('canvas');
+                const canvas = tempDiv.querySelector('canvas');
+                const img = tempDiv.querySelector('img');
+                let dataUrl = "";
 
-                if (canvas) currentCanvas = canvas;
-                else if (img) {
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = w;
-                    tempCanvas.height = h;
-                    const ctx = tempCanvas.getContext('2d');
-                    const tempImg = new Image();
-                    tempImg.onload = () => {
-                        ctx.drawImage(tempImg, 0, 0, w, h);
-                        currentCanvas = tempCanvas;
-                    };
-                    tempImg.src = img.src;
+                if (canvas) {
+                    dataUrl = canvas.toDataURL();
+                } else if (img && img.src) {
+                    dataUrl = img.src;
                 }
 
+                if (dataUrl) {
+                    const link = document.createElement('a');
+                    link.download = `qr_${params.w}x${params.h}.png`;
+                    link.href = dataUrl;
+                    link.click();
+                } else {
+                    alert("Failed to generate QR for download. Try again.");
+                }
+                tempDiv.remove();
             }, 300);
-        };
-
-        saveBtn.onclick = () => {
-            if (!currentCanvas) {
-                alert("Generate a QR first!");
-                return;
-            }
-
-            const link = document.createElement('a');
-            link.download = 'qr.png';
-            link.href = currentCanvas.toDataURL();
-            link.click();
         };
     </script>
 

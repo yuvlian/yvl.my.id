@@ -5,45 +5,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>img2pdf</title>
-    <meta property="og:title" content="Img2PDF">
-    <meta property="og:description" content="Simple tool with no ads to bundle images into a single pdf, all client sided.">
+    <meta property="og:title" content="Img2pdf">
+    <meta property="og:description"
+        content="Simple tool with no ads to bundle images into a single pdf, all client sided.">
     <style>
         body {
             font-family: sans-serif;
             margin: 0;
             padding: 20px;
             background: #f2f2f2;
-            display: flex;
-            justify-content: center;
+        }
+
+        .box {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
 
         * {
             box-sizing: border-box;
         }
 
-        .box {
-            width: 100%;
-            max-width: 500px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        h2 {
-            margin-top: 0;
-            font-weight: 600;
-            color: #333;
-        }
-
+        input,
         button,
-        input[type="file"],
-        input[type="text"] {
+        select {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
+            margin: 8px 0;
             border-radius: 8px;
-            margin: 10px 0;
             border: 1px solid #ccc;
             font-size: 16px;
         }
@@ -53,21 +45,79 @@
             color: white;
             border: none;
             cursor: pointer;
-            transition: opacity 0.2s;
         }
 
-        button:hover {
-            opacity: 0.9;
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
         }
 
         #fileInput {
             display: none;
         }
 
-        #fileList {
-            margin: 5px 0 15px;
+        .image-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #ddd;
+        }
+
+        .image-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .image-name {
             font-size: 14px;
-            color: #555;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+        }
+
+        .image-controls {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 8px;
+            align-items: end;
+        }
+
+        .image-controls div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .image-controls label {
+            font-size: 11px;
+            margin: 0;
+        }
+
+        .image-controls input,
+        .image-controls select {
+            margin: 2px 0;
+            padding: 5px;
+            font-size: 12px;
         }
 
         @media (max-width: 480px) {
@@ -79,8 +129,9 @@
                 padding: 15px;
             }
 
+            input,
             button,
-            input[type="text"] {
+            select {
                 font-size: 15px;
             }
         }
@@ -88,27 +139,27 @@
 </head>
 
 <body>
-
     <noscript>
-        <div class="box" style="
-            margin-bottom:15px;
-            background:#ffe5e5;
-            color:#7a0000;
-            border-left:5px solid red;
-        ">
+        <div class="box" style="background:#ffe5e5; color:#7a0000; border-left:5px solid red; margin-bottom: 20px;">
             JavaScript is required to use this page.
         </div>
     </noscript>
 
     <div class="box">
-        <h2>img2pdf</h2>
+        <h2>Img2pdf</h2>
+        <label>Bundle images into a single PDF, all client-sided.</label>
+        <hr style="margin:20px 0;opacity:0.3;">
 
         <button id="pickBtn">Select Images</button>
+        <button id="clearBtn">Clear All</button>
         <input type="file" id="fileInput" accept="image/*" multiple>
 
-        <p id="fileList"></p>
+        <div id="imageList"></div>
 
-        <input type="text" id="pdfName" placeholder="MyFileName">
+        <hr style="margin:20px 0;opacity:0.3;">
+
+        <label for="pdfName">PDF Filename</label>
+        <input type="text" id="pdfName" placeholder="output">
 
         <button id="makePdfBtn">Generate PDF</button>
     </div>
@@ -117,23 +168,91 @@
 
     <script>
         const pickBtn = document.getElementById("pickBtn");
+        const clearBtn = document.getElementById("clearBtn");
         const fileInput = document.getElementById("fileInput");
-        const fileList = document.getElementById("fileList");
+        const imageList = document.getElementById("imageList");
         const makePdfBtn = document.getElementById("makePdfBtn");
 
         let selectedFiles = [];
 
         pickBtn.onclick = () => fileInput.click();
 
-        fileInput.onchange = () => {
-            selectedFiles = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+        clearBtn.onclick = () => {
+            selectedFiles.forEach(item => URL.revokeObjectURL(item.preview));
+            selectedFiles = [];
+            renderImageList();
+        };
 
-            if (selectedFiles.length === 0) {
-                fileList.textContent = "No valid images selected.";
-                return;
+        fileInput.onchange = async () => {
+            const files = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+
+            for (const file of files) {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.src = url;
+                await new Promise(resolve => img.onload = resolve);
+
+                selectedFiles.push({
+                    file: file,
+                    preview: url,
+                    name: file.name,
+                    width: img.width,
+                    height: img.height,
+                    rotation: 0
+                });
             }
 
-            fileList.textContent = selectedFiles.length + " image(s) selected";
+            renderImageList();
+            fileInput.value = "";
+        };
+
+        function renderImageList() {
+            imageList.innerHTML = "";
+            if (selectedFiles.length === 0) return;
+
+            selectedFiles.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.className = "image-item";
+                div.innerHTML = `
+                    <div style="flex-shrink:0;">
+                        <img src="${item.preview}" class="image-preview" style="transform: rotate(${item.rotation}deg); width:60px; height:60px;">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-name">${item.name}</div>
+                        <div style="display:flex; gap:15px; margin-bottom:2px;">
+                            <label style="flex:1; font-size:11px; margin:0;">Rotation</label>
+                            <label style="flex:1; font-size:11px; margin:0;">Width (px)</label>
+                        </div>
+                        <div style="display:flex; gap:15px; align-items: flex-start;">
+                            <div style="display:flex; flex-direction:column; flex:1;">
+                                <button style="padding:5px 4px; font-size:12px; margin:1px 0;" onclick="rotateItem(${index}, -90)">↶ 90°</button>
+                                <button style="padding:5px 4px; font-size:12px; margin:1px 0;" onclick="rotateItem(${index}, 90)">↷ 90°</button>
+                            </div>
+                            <div style="flex:1;">
+                                <input type="number" value="${item.width}" style="margin:1px 0; padding:4px 10px; font-size:12px;" onchange="updateItem(${index}, 'width', parseInt(this.value))">
+                            </div>
+                        </div>
+                    </div>
+                    <button style="width:34px; height:34px; background:#ff4d4d; color:white; border:none; border-radius:10px; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:10px;" onclick="removeItem(${index})">×</button>
+                `;
+                imageList.appendChild(div);
+            });
+        }
+
+        window.rotateItem = (index, degrees) => {
+            selectedFiles[index].rotation = (selectedFiles[index].rotation + degrees) % 360;
+            if (selectedFiles[index].rotation < 0) selectedFiles[index].rotation += 360;
+            renderImageList();
+        };
+
+        window.updateItem = (index, key, value) => {
+            selectedFiles[index][key] = value;
+        };
+
+        window.removeItem = (index) => {
+            URL.revokeObjectURL(selectedFiles[index].preview);
+            selectedFiles.splice(index, 1);
+            renderImageList();
         };
 
         makePdfBtn.onclick = async () => {
@@ -142,32 +261,80 @@
                 return;
             }
 
-            let name = document.getElementById("pdfName").value.trim();
-            if (!name) name = "output";
-            name += ".pdf";
+            makePdfBtn.disabled = true;
+            makePdfBtn.textContent = "Generating...";
 
-            const pdfDoc = await PDFLib.PDFDocument.create();
+            try {
+                let name = document.getElementById("pdfName").value.trim();
+                if (!name) name = "output";
+                name += ".pdf";
 
-            for (const file of selectedFiles) {
-                const bytes = await file.arrayBuffer();
-                const image = file.type === "image/png"
-                    ? await pdfDoc.embedPng(bytes)
-                    : await pdfDoc.embedJpg(bytes);
+                const pdfDoc = await PDFLib.PDFDocument.create();
 
-                const page = pdfDoc.addPage([image.width, image.height]);
-                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+                for (const item of selectedFiles) {
+                    const bytes = await item.file.arrayBuffer();
+                    const image = item.file.type === "image/png"
+                        ? await pdfDoc.embedPng(bytes)
+                        : await pdfDoc.embedJpg(bytes);
+
+                    const naturalWidth = image.width;
+                    const naturalHeight = image.height;
+                    const rotationDeg = item.rotation;
+
+                    let pageWidth, pageHeight, drawWidth, drawHeight, x, y;
+
+                    if (rotationDeg === 90 || rotationDeg === 270) {
+                        pageWidth = item.width;
+                        pageHeight = item.width * (naturalWidth / naturalHeight);
+                        drawWidth = pageHeight;
+                        drawHeight = pageWidth;
+                    } else {
+                        pageWidth = item.width;
+                        pageHeight = item.width * (naturalHeight / naturalWidth);
+                        drawWidth = pageWidth;
+                        drawHeight = pageHeight;
+                    }
+
+                    if (rotationDeg === 90) {
+                        x = 0;
+                        y = pageHeight;
+                    } else if (rotationDeg === 180) {
+                        x = pageWidth;
+                        y = pageHeight;
+                    } else if (rotationDeg === 270) {
+                        x = pageWidth;
+                        y = 0;
+                    } else {
+                        x = 0;
+                        y = 0;
+                    }
+
+                    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+                    page.drawImage(image, {
+                        x: x,
+                        y: y,
+                        width: drawWidth,
+                        height: drawHeight,
+                        rotate: PDFLib.degrees(-rotationDeg)
+                    });
+                }
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: "application/pdf" });
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                a.click();
+
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Error generating PDF: " + err);
+            } finally {
+                makePdfBtn.disabled = false;
+                makePdfBtn.textContent = "Generate PDF";
             }
-
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes], { type: "application/pdf" });
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = name;
-            a.click();
-
-            URL.revokeObjectURL(url);
         };
     </script>
 
