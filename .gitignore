@@ -1,0 +1,8 @@
+/**
+
+!/dist/
+!/dist/**
+
+!.gitignore
+!LICENSE
+!wrangler.json

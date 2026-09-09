@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>timepeeker</title>
+    <meta property="og:title" content="Timepeeker">
+    <meta property="og:description" content="Find the best shared time window across multiple timezones.">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f2f2;
+        }
+
+        .box {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        input,
+        button,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        textarea {
+            font-family: monospace;
+            font-size: 12px;
+            height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: #006cff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .slot-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .slot-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #fff;
+            transition: transform 0.1s;
+        }
+
+        .result-item:hover {
+            border-color: #006cff;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .score-badge {
+            background: #e7f3ff;
+            color: #006cff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .time-range {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .local-times {
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        hr {
+            margin: 20px 0;
+            border: 0;
+            border-top: 1px solid #eee;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <noscript>
+        <div class="box" style="background:#ffe5e5; color:#7a0000; border-left:5px solid red;">
+            JavaScript is required to use Timepeeker.
+        </div>
+    </noscript>
+
+    <div class="box">
+        <h2>Timepeeker</h2>
+        <label>Find the best meeting time for everyone.</label>
+        <hr>
+
+        <h3>My Availability</h3>
+        <label for="timezone">My Timezone</label>
+        <select id="timezone"></select>
+
+        <label>Start</label>
+        <input type="datetime-local" id="start-time">
+        <label>End</label>
+        <input type="datetime-local" id="end-time">
+        <button id="add-slot-btn">Add Availability Slot</button>
+
+        <div id="slots-list"></div>
+
+        <button id="clear-slots-btn">Clear My Slots</button>
+        <button id="copy-my-data-btn">Copy My Data Code</button>
+        <label>Share this code with the organizer.</label>
+    </div>
+
+    <div class="box">
+        <h3>Group Analysis</h3>
+        <label for="group-data">Paste Participant Codes (one per line)</label>
+        <textarea id="group-data"
+            placeholder="tp:eyJ0eiI6IkFzaWEvSmFrYXJ0YSIsIml2IjpbWyIxNzMwMDYwODAwMDAwIiwiMTczMDA2ODAwMDAwMCJdXX0=&#10;..."></textarea>
+
+        <button id="clear-group-btn">Clear Group Data</button>
+        <button id="calculate-btn">Find Best Shared Times</button>
+
+        <label for="duration">Meeting Duration (minutes)</label>
+        <input type="number" id="duration" value="60" min="15" step="15">
+    </div>
+
+    <div id="analysis-results-box" class="box hidden">
+        <h3>Analysis Results</h3>
+        <div id="analysis-results-list"></div>
+        <button id="copy-analysis-results-btn">Copy Result Code</button>
+    </div>
+
+    <div class="box">
+        <h3>View Result Code</h3>
+        <label>Paste a shared result code to view it.</label>
+        <textarea id="view-result-input"
+            placeholder="tr:eyJ3aW5kb3dzIjpbeyJzdGFydCI6MTczMDA2MDgwMDAwMCwiZW5kIjoxNzMwMDY0NDAwMDAwLCJzY29yZSI6Mn1dfQ=="></textarea>
+        <button id="view-result-btn">View Result</button>
+    </div>
+
+    <div id="view-results-box" class="box hidden">
+        <h3>Viewed Result</h3>
+        <div id="view-results-list"></div>
+    </div>
+
+    <script>
+        const timezoneSelect = document.getElementById('timezone');
+        const startTimeInput = document.getElementById('start-time');
+        const endTimeInput = document.getElementById('end-time');
+        const addSlotBtn = document.getElementById('add-slot-btn');
+        const slotsList = document.getElementById('slots-list');
+        const copyMyDataBtn = document.getElementById('copy-my-data-btn');
+        const groupDataInput = document.getElementById('group-data');
+        const durationInput = document.getElementById('duration');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const analysisResultsBox = document.getElementById('analysis-results-box');
+        const analysisResultsList = document.getElementById('analysis-results-list');
+        const copyAnalysisResultsBtn = document.getElementById('copy-analysis-results-btn');
+        const viewResultsBox = document.getElementById('view-results-box');
+        const viewResultsList = document.getElementById('view-results-list');
+        const viewResultInput = document.getElementById('view-result-input');
+        const viewResultBtn = document.getElementById('view-result-btn');
+
+        const clearSlotsBtn = document.getElementById('clear-slots-btn');
+        const clearGroupBtn = document.getElementById('clear-group-btn');
+
+        let mySlots = [];
+
+        clearSlotsBtn.onclick = () => {
+            if (confirm("Clear all your availability slots?")) {
+                mySlots = [];
+                renderSlots();
+            }
+        };
+
+        clearGroupBtn.onclick = () => {
+            groupDataInput.value = "";
+        };
+
+        const timezones = Intl.supportedValuesOf('timeZone');
+        const myTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        timezones.forEach(tz => {
+            const opt = document.createElement('option');
+            opt.value = tz;
+            opt.textContent = tz;
+            if (tz === myTz) opt.selected = true;
+            timezoneSelect.appendChild(opt);
+        });
+
+        const now = new Date();
+        now.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0);
+        const later = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+        function toIsoLocal(date) {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().slice(0, 16);
+        }
+
+        startTimeInput.value = toIsoLocal(now);
+        endTimeInput.value = toIsoLocal(later);
+
+        addSlotBtn.onclick = () => {
+            const start = new Date(startTimeInput.value).getTime();
+            const end = new Date(endTimeInput.value).getTime();
+
+            if (isNaN(start) || isNaN(end) || start >= end) {
+                alert("Please select a valid time range.");
+                return;
+            }
+
+            mySlots.push({ start, end });
+            renderSlots();
+        };
+
+        function renderSlots() {
+            slotsList.innerHTML = "";
+            mySlots.sort((a, b) => a.start - b.start).forEach((slot, index) => {
+                const div = document.createElement('div');
+                div.className = "slot-item";
+                const startStr = new Date(slot.start).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                const endStr = new Date(slot.end).toLocaleString([], { timeStyle: 'short' });
+                div.innerHTML = `
+                    <span>${startStr} - ${endStr}</span>
+                    <button style="width: auto; padding: 4px 8px; margin: 0; background: #ff4d4d;" onclick="removeSlot(${index})">×</button>
+                `;
+                slotsList.appendChild(div);
+            });
+        }
+
+        window.removeSlot = (index) => {
+            mySlots.splice(index, 1);
+            renderSlots();
+        };
+
+        copyMyDataBtn.onclick = () => {
+            if (mySlots.length === 0) {
+                alert("Please add at least one availability slot.");
+                return;
+            }
+            const data = {
+                tz: timezoneSelect.value,
+                iv: mySlots.map(s => [s.start, s.end])
+            };
+            const code = "tp:" + btoa(JSON.stringify(data));
+            navigator.clipboard.writeText(code).then(() => alert("Data code copied to clipboard!"));
+        };
+
+        calculateBtn.onclick = () => {
+            const lines = groupDataInput.value.trim().split('\n');
+            const rawData = lines.filter(l => l.trim().startsWith("tp:"));
+            if (rawData.length === 0) {
+                alert("Please paste at least one participant code.");
+                return;
+            }
+
+            const participants = rawData.map(line => {
+                try {
+                    return JSON.parse(atob(line.trim().replace("tp:", "")));
+                } catch (e) {
+                    console.error("Failed to parse line:", line);
+                    return null;
+                }
+            }).filter(p => p !== null);
+
+            if (participants.length === 0) {
+                alert("No valid participant data found.");
+                return;
+            }
+
+            const duration = parseInt(durationInput.value);
+            const results = findBestSharedTime(participants, duration);
+            renderResults(results, participants, analysisResultsList, analysisResultsBox);
+
+            const resultData = {
+                windows: results,
+                tzs: participants.map(p => p.tz)
+            };
+            copyAnalysisResultsBtn.onclick = () => {
+                const code = "tr:" + btoa(JSON.stringify(resultData));
+                navigator.clipboard.writeText(code).then(() => alert("Result code copied!"));
+            };
+        };
+
+        function findBestSharedTime(participants, durationMinutes) {
+            const durationMs = durationMinutes * 60 * 1000;
+            let events = [];
+
+            participants.forEach((p, pIdx) => {
+                p.iv.forEach(iv => {
+                    events.push({ time: parseInt(iv[0]), type: 1, pIdx });
+                    events.push({ time: parseInt(iv[1]), type: -1, pIdx });
+                });
+            });
+
+            if (events.length === 0) return [];
+            events.sort((a, b) => a.time - b.time || a.type - b.type);
+
+            const minTime = events[0].time;
+            const maxTime = events[events.length - 1].time;
+
+            let timeline = [];
+            let activeCount = 0;
+
+            events.forEach((e, i) => {
+                if (e.type === 1) activeCount++;
+                else activeCount--;
+                if (i === events.length - 1 || events[i + 1].time !== e.time) {
+                    timeline.push({ time: e.time, score: activeCount });
+                }
+            });
+
+            const SLOT_MS = 30 * 60 * 1000;
+            let potentialStarts = new Set();
+            for (let t = Math.floor(minTime / SLOT_MS) * SLOT_MS; t <= maxTime; t += SLOT_MS) {
+                potentialStarts.add(t);
+            }
+            events.forEach(e => potentialStarts.add(e.time));
+
+            let windows = [];
+            Array.from(potentialStarts).sort((a, b) => a - b).forEach(start => {
+                const end = start + durationMs;
+                if (end > maxTime) return;
+
+                let minScoreInWindow = 0;
+                let startIdx = timeline.findIndex(t => t.time > start) - 1;
+
+                if (startIdx < 0) {
+                    const exact = timeline.find(t => t.time === start);
+                    minScoreInWindow = exact ? exact.score : 0;
+                } else {
+                    minScoreInWindow = timeline[startIdx].score;
+                }
+
+                timeline.forEach(t => {
+                    if (t.time > start && t.time < end) {
+                        if (t.score < minScoreInWindow) minScoreInWindow = t.score;
+                    }
+                });
+
+                if (minScoreInWindow > 0) {
+                    windows.push({ start, end, score: minScoreInWindow });
+                }
+            });
+
+            windows.sort((a, b) => b.score - a.score || a.start - b.start);
+
+            let uniqueWindows = [];
+            windows.forEach(w => {
+                if (!uniqueWindows.some(uw => Math.abs(uw.start - w.start) < SLOT_MS && uw.score >= w.score)) {
+                    uniqueWindows.push(w);
+                }
+            });
+
+            return uniqueWindows.slice(0, 10);
+        }
+
+        function renderResults(results, participants, targetList, targetBox) {
+            targetList.innerHTML = "";
+            if (results.length === 0) {
+                targetList.innerHTML = "<p>No common windows found.</p>";
+            } else {
+                results.forEach(res => {
+                    const div = document.createElement('div');
+                    div.className = "result-item";
+                    const start = new Date(res.start);
+                    const end = new Date(res.end);
+
+                    let localTimesHtml = "";
+                    participants.forEach((p, i) => {
+                        const pStart = start.toLocaleTimeString([], { timeZone: p.tz, hour: '2-digit', minute: '2-digit' });
+                        const pEnd = end.toLocaleTimeString([], { timeZone: p.tz, hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+                        localTimesHtml += `<div>User ${i + 1} (${p.tz}): ${pStart} - ${pEnd}</div>`;
+                    });
+
+                    div.innerHTML = `
+                        <div class="result-header">
+                            <span class="time-range">${start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} - ${end.toLocaleTimeString([], { timeStyle: 'short' })}</span>
+                            <span class="score-badge">${res.score} / ${participants.length || '?'} Available</span>
+                        </div>
+                        <div class="local-times">${localTimesHtml}</div>
+                    `;
+                    targetList.appendChild(div);
+                });
+            }
+            targetBox.classList.remove('hidden');
+            targetBox.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        viewResultBtn.onclick = () => {
+            const raw = viewResultInput.value.trim();
+            if (!raw.startsWith("tr:")) {
+                alert("Invalid result code format. Codes should start with 'tr:'.");
+                return;
+            }
+            try {
+                const base64 = raw.replace("tr:", "").replace(/\s/g, '');
+                const json = atob(base64);
+                const data = JSON.parse(json);
+
+                if (!data.windows || !Array.isArray(data.windows)) {
+                    throw new Error("Invalid result data: 'windows' array is missing.");
+                }
+
+                const pseudoParticipants = (data.tzs || []).map(tz => ({ tz, iv: [] }));
+                renderResults(data.windows, pseudoParticipants, viewResultsList, viewResultsBox);
+            } catch (e) {
+                alert("Failed to decode result code: " + e.message);
+                console.error(e);
+            }
+        };
+
+    </script>
+</body>
+
+</html>

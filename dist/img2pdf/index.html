@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>img2pdf</title>
+    <meta property="og:title" content="Img2pdf">
+    <meta property="og:description"
+        content="Simple tool with no ads to bundle images into a single pdf, all client sided.">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f2f2;
+        }
+
+        .box {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        input,
+        button,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        button {
+            background: #006cff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .image-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #ddd;
+        }
+
+        .image-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .image-name {
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+        }
+
+        .image-controls {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 8px;
+            align-items: end;
+        }
+
+        .image-controls div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .image-controls label {
+            font-size: 11px;
+            margin: 0;
+        }
+
+        .image-controls input,
+        .image-controls select {
+            margin: 2px 0;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .box {
+                padding: 15px;
+            }
+
+            input,
+            button,
+            select {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <noscript>
+        <div class="box" style="background:#ffe5e5; color:#7a0000; border-left:5px solid red; margin-bottom: 20px;">
+            JavaScript is required to use this page.
+        </div>
+    </noscript>
+
+    <div class="box">
+        <h2>Img2pdf</h2>
+        <label>Bundle images into a single PDF, all client-sided.</label>
+        <hr style="margin:20px 0;opacity:0.3;">
+
+        <button id="pickBtn">Select Images</button>
+        <button id="clearBtn">Clear All</button>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+
+        <div id="imageList"></div>
+
+        <hr style="margin:20px 0;opacity:0.3;">
+
+        <label for="pdfName">PDF Filename</label>
+        <input type="text" id="pdfName" placeholder="output">
+
+        <button id="makePdfBtn">Generate PDF</button>
+    </div>
+
+    <script src="/_external/pdf-lib.min.js"></script>
+
+    <script>
+        const pickBtn = document.getElementById("pickBtn");
+        const clearBtn = document.getElementById("clearBtn");
+        const fileInput = document.getElementById("fileInput");
+        const imageList = document.getElementById("imageList");
+        const makePdfBtn = document.getElementById("makePdfBtn");
+
+        let selectedFiles = [];
+
+        pickBtn.onclick = () => fileInput.click();
+
+        clearBtn.onclick = () => {
+            selectedFiles.forEach(item => URL.revokeObjectURL(item.preview));
+            selectedFiles = [];
+            renderImageList();
+        };
+
+        // returns 1..8, or 0 when absent/not a jpeg
+        function readExifOrientation(buffer) {
+            const view = new DataView(buffer);
+            if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return 0;
+
+            let offset = 2;
+            while (offset + 4 <= view.byteLength) {
+                const marker = view.getUint16(offset);
+                if (marker === 0xFFDA) break;
+                const length = view.getUint16(offset + 2);
+
+                if (marker === 0xFFE1 && length >= 8 && view.getUint32(offset + 4) === 0x45786966) {
+                    const tiff = offset + 10;
+                    if (tiff + 8 > view.byteLength) return 0;
+                    const little = view.getUint16(tiff) === 0x4949;
+                    const u16 = p => view.getUint16(p, little);
+                    const u32 = p => view.getUint32(p, little);
+                    const ifd0 = tiff + u32(tiff + 4);
+                    if (ifd0 + 2 > view.byteLength) return 0;
+                    const count = u16(ifd0);
+                    for (let i = 0; i < count; i++) {
+                        const entry = ifd0 + 2 + i * 12;
+                        if (entry + 12 > view.byteLength) break;
+                        if (u16(entry) === 0x0112) return u16(entry + 8);
+                    }
+                    return 0;
+                }
+                offset += 2 + length;
+            }
+            return 0;
+        }
+
+        function exifToDegrees(orientation) {
+            switch (orientation) {
+                case 6:  return 90;   // raw renders correct after 90 deg CW
+                case 3:  return 180;  // upside down
+                case 8:  return 270;  // 90 deg CCW
+                default: return 0;
+            }
+        }
+
+        fileInput.onchange = async () => {
+            const files = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+
+            for (const file of files) {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.src = url;
+                await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+                const exifDegrees = exifToDegrees(readExifOrientation(await file.arrayBuffer()));
+                selectedFiles.push({
+                    file: file,
+                    preview: url,
+                    name: file.name,
+                    width: img.width,
+                    height: img.height,
+                    rotation: 0,
+                    exifDegrees: exifDegrees
+                });
+            }
+
+            renderImageList();
+            fileInput.value = "";
+        };
+
+        function renderImageList() {
+            imageList.innerHTML = "";
+            if (selectedFiles.length === 0) return;
+
+            selectedFiles.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.className = "image-item";
+                div.innerHTML = `
+                    <div style="flex-shrink:0;">
+                        <img src="${item.preview}" class="image-preview" style="transform: rotate(${item.rotation}deg); width:60px; height:60px;">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-name">${item.name}</div>
+                        <div style="display:flex; gap:15px; margin-bottom:2px;">
+                            <label style="flex:1; font-size:11px; margin:0;">Rotation</label>
+                            <label style="flex:1; font-size:11px; margin:0;">Width (px)</label>
+                        </div>
+                        <div style="display:flex; gap:15px; align-items: flex-start;">
+                            <div style="display:flex; flex-direction:column; flex:1;">
+                                <button style="padding:5px 4px; font-size:12px; margin:1px 0;" onclick="rotateItem(${index}, -90)">↶ 90°</button>
+                                <button style="padding:5px 4px; font-size:12px; margin:1px 0;" onclick="rotateItem(${index}, 90)">↷ 90°</button>
+                            </div>
+                            <div style="flex:1;">
+                                <input type="number" value="${item.width}" style="margin:1px 0; padding:4px 10px; font-size:12px;" onchange="updateItem(${index}, 'width', parseInt(this.value))">
+                            </div>
+                        </div>
+                    </div>
+                    <button style="width:34px; height:34px; background:#ff4d4d; color:white; border:none; border-radius:10px; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:10px;" onclick="removeItem(${index})">×</button>
+                `;
+                imageList.appendChild(div);
+            });
+        }
+
+        window.rotateItem = (index, degrees) => {
+            selectedFiles[index].rotation = (selectedFiles[index].rotation + degrees) % 360;
+            if (selectedFiles[index].rotation < 0) selectedFiles[index].rotation += 360;
+            renderImageList();
+        };
+
+        window.updateItem = (index, key, value) => {
+            selectedFiles[index][key] = value;
+        };
+
+        window.removeItem = (index) => {
+            URL.revokeObjectURL(selectedFiles[index].preview);
+            selectedFiles.splice(index, 1);
+            renderImageList();
+        };
+
+        async function convertToPng(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            blob.arrayBuffer().then(resolve);
+                        } else {
+                            reject(new Error("Canvas toBlob failed"));
+                        }
+                    }, "image/png");
+                };
+                img.onerror = () => reject(new Error("Failed to load image for conversion"));
+                img.src = url;
+            });
+        }
+
+        makePdfBtn.onclick = async () => {
+            if (selectedFiles.length === 0) {
+                alert("Please select at least one image.");
+                return;
+            }
+
+            makePdfBtn.disabled = true;
+            makePdfBtn.textContent = "Generating...";
+
+            try {
+                let name = document.getElementById("pdfName").value.trim();
+                if (!name) name = "output";
+                name += ".pdf";
+
+                const pdfDoc = await PDFLib.PDFDocument.create();
+
+                for (const item of selectedFiles) {
+                    const bytes = await item.file.arrayBuffer();
+                    let image;
+                    let rawEmbedded = true;
+
+                    const type = item.file.type.toLowerCase();
+                    const name = item.file.name.toLowerCase();
+                    const isPng = type === "image/png" || name.endsWith(".png");
+                    const isJpg = type === "image/jpeg" || type === "image/jpg" || name.endsWith(".jpg") || name.endsWith(".jpeg");
+
+                    try {
+                        if (isPng) {
+                            image = await pdfDoc.embedPng(bytes);
+                        } else if (isJpg) {
+                            image = await pdfDoc.embedJpg(bytes);
+                        } else {
+                            throw new Error("Unsupported format");
+                        }
+                    } catch (e) {
+                        rawEmbedded = false;
+                        const pngBytes = await convertToPng(item.preview);
+                        image = await pdfDoc.embedPng(pngBytes);
+                    }
+
+                    const naturalWidth = image.width;
+                    const naturalHeight = image.height;
+
+                    const rotationDeg = (item.rotation + (rawEmbedded ? item.exifDegrees : 0) + 360) % 360;
+
+                    let pageWidth, pageHeight, drawWidth, drawHeight, x, y;
+
+                    if (rotationDeg === 90 || rotationDeg === 270) {
+                        pageWidth = item.width;
+                        pageHeight = item.width * (naturalWidth / naturalHeight);
+                        drawWidth = pageHeight;
+                        drawHeight = pageWidth;
+                    } else {
+                        pageWidth = item.width;
+                        pageHeight = item.width * (naturalHeight / naturalWidth);
+                        drawWidth = pageWidth;
+                        drawHeight = pageHeight;
+                    }
+
+                    if (rotationDeg === 90) {
+                        x = 0;
+                        y = pageHeight;
+                    } else if (rotationDeg === 180) {
+                        x = pageWidth;
+                        y = pageHeight;
+                    } else if (rotationDeg === 270) {
+                        x = pageWidth;
+                        y = 0;
+                    } else {
+                        x = 0;
+                        y = 0;
+                    }
+
+                    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+                    page.drawImage(image, {
+                        x: x,
+                        y: y,
+                        width: drawWidth,
+                        height: drawHeight,
+                        rotate: PDFLib.degrees(-rotationDeg)
+                    });
+                }
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: "application/pdf" });
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                a.click();
+
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Error generating PDF: " + err);
+            } finally {
+                makePdfBtn.disabled = false;
+                makePdfBtn.textContent = "Generate PDF";
+            }
+        };
+    </script>
+
+</body>
+
+</html>
