@@ -122,6 +122,53 @@ const constraints = WordleFilter.create();
 const rows = [];
 const COLORS = ["gray", "yellow", "green"];
 
+function makeRow(container, placeholder, onChange) {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "row";
+
+    const input = document.createElement("input");
+    input.className = "word-input";
+    input.maxLength = 5;
+    input.placeholder = placeholder;
+
+    const colorGrid = document.createElement("div");
+    colorGrid.className = "color-grid";
+
+    const boxes = [];
+    for (let j = 0; j < 5; j++) {
+        const box = document.createElement("div");
+        box.className = "color-box gray";
+        box.dataset.color = "gray";
+
+        box.addEventListener("click", () => {
+            const curIndex = COLORS.indexOf(box.dataset.color);
+            const nextIndex = (curIndex + 1) % COLORS.length;
+            const nextColor = COLORS[nextIndex];
+
+            box.dataset.color = nextColor;
+            box.className = `color-box ${nextColor}`;
+            onChange();
+        });
+
+        colorGrid.appendChild(box);
+        boxes.push(box);
+    }
+
+    input.addEventListener("input", () => {
+        input.value = input.value.toUpperCase().replace(/[^A-Z]/g, "");
+        const val = input.value;
+        boxes.forEach((box, idx) => {
+            box.textContent = val[idx] || "";
+        });
+        onChange();
+    });
+
+    rowDiv.appendChild(input);
+    rowDiv.appendChild(colorGrid);
+    container.appendChild(rowDiv);
+    return { input, boxes };
+}
+
 function updateResults() {
     WordleFilter.reset(constraints);
 
@@ -147,51 +194,7 @@ function updateResults() {
 }
 
 for (let i = 0; i < 6; i++) {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "row";
-
-    const input = document.createElement("input");
-    input.className = "word-input";
-    input.maxLength = 5;
-    input.placeholder = `Guess ${i + 1}`;
-
-    const colorGrid = document.createElement("div");
-    colorGrid.className = "color-grid";
-
-    const boxes = [];
-    for (let j = 0; j < 5; j++) {
-        const box = document.createElement("div");
-        box.className = "color-box gray";
-        box.dataset.color = "gray";
-
-        box.addEventListener("click", () => {
-            const curIndex = COLORS.indexOf(box.dataset.color);
-            const nextIndex = (curIndex + 1) % COLORS.length;
-            const nextColor = COLORS[nextIndex];
-            
-            box.dataset.color = nextColor;
-            box.className = `color-box ${nextColor}`;
-            updateResults();
-        });
-
-        colorGrid.appendChild(box);
-        boxes.push(box);
-    }
-
-    input.addEventListener("input", () => {
-        input.value = input.value.toUpperCase().replace(/[^A-Z]/g, "");
-        const val = input.value;
-        boxes.forEach((box, idx) => {
-            box.textContent = val[idx] || "";
-        });
-        updateResults();
-    });
-
-    rowDiv.appendChild(input);
-    rowDiv.appendChild(colorGrid);
-    inputsContainer.appendChild(rowDiv);
-
-    rows.push({ input, boxes });
+    rows.push(makeRow(inputsContainer, `Guess ${i + 1}`, updateResults));
 }
 
 window.resetAll = () => {
@@ -206,4 +209,185 @@ window.resetAll = () => {
     updateResults();
 };
 
+function setMode(mode) {
+    const finder = mode === "finder";
+    document.getElementById("finder-ui").style.display = finder ? "" : "none";
+    document.getElementById("solver-ui").style.display = finder ? "none" : "";
+    document.getElementById("results").style.display = finder ? "" : "none";
+    document.getElementById("mode-filter").classList.toggle("active", finder);
+    document.getElementById("mode-solver").classList.toggle("active", !finder);
+    document.getElementById("subtitle").textContent = finder
+        ? "So you don't have to google \"5 letter word containing ... ending with ...\""
+        : "Click the letters to match the game's colors after each guess.";
+    if (finder) {
+        updateResults();
+    } else {
+        resetSolve();
+    }
+}
+window.setMode = setMode;
+document.getElementById("mode-filter").addEventListener("click", () => setMode("finder"));
+document.getElementById("mode-solver").addEventListener("click", () => setMode("solver"));
+
 updateResults();
+
+const solverContainer = document.getElementById("solver-rows");
+
+const openers = [
+    "tares", "lares", "rales", "rates", "ranes", "nares", "reais", "teras",
+    "soare", "tales", "aeros", "sater", "tears", "seria", "saner", "arles",
+    "tores", "dares", "serai", "pares",
+];
+
+const SOLVER_COLORS = ["unset", "gray", "yellow", "green"];
+const solverRows = []; // { word, boxes, done: bool }
+const solverConstraints = WordleFilter.create();
+
+window.startSolve = () => {
+    appendSolveRow("TARES");
+};
+
+function appendSolveRow(word) {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "row";
+    const colorGrid = document.createElement("div");
+    colorGrid.className = "color-grid";
+    const boxes = [];
+    for (let j = 0; j < 5; j++) {
+        const box = document.createElement("div");
+        box.className = "color-box gray";
+        box.dataset.color = "gray";
+        box.textContent = word[j];
+        box.addEventListener("click", () => {
+            const row = solverRows.find(r => r.boxes.includes(box));
+            if (row.done) {
+                const idx = solverRows.indexOf(row);
+                solverRows.splice(idx).forEach(r => r.div.remove());
+                solverRows.push(row);
+                row.div.remove();
+                solverContainer.appendChild(row.div);
+                row.done = false;
+            }
+            const curIndex = SOLVER_COLORS.indexOf(box.dataset.color);
+            const nextColor = SOLVER_COLORS[(curIndex + 1) % SOLVER_COLORS.length];
+            box.dataset.color = nextColor;
+            box.className = `color-box ${nextColor}`;
+            onFeedbackChanged();
+        });
+        colorGrid.appendChild(box);
+        boxes.push(box);
+    }
+    rowDiv.appendChild(colorGrid);
+    solverContainer.appendChild(rowDiv);
+    boxes.forEach(b => { b.dataset.color = "unset"; b.className = "color-box unset"; });
+    solverRows.push({ word, boxes, div: rowDiv, done: false });
+    onFeedbackChanged();
+}
+
+function rowComplete(row) {
+    return row.boxes.every(b => b.dataset.color !== "unset");
+}
+
+function playedWords() {
+    return new Set(solverRows.filter(r => r.done).map(r => r.word));
+}
+
+function currentCandidates() {
+    WordleFilter.reset(solverConstraints);
+    for (const row of solverRows) {
+        if (!row.done) continue;
+        WordleFilter.applyGuess(solverConstraints, Array.from(row.word), row.boxes.map(b => b.dataset.color));
+    }
+    const played = playedWords();
+    return WordleFilter.getValidWords(solverConstraints).filter(w => !played.has(w));
+}
+
+function onFeedbackChanged() {
+    for (const row of solverRows) {
+        row.done = rowComplete(row);
+        if (!row.done) break;
+    }
+    const last = solverRows[solverRows.length - 1];
+    if (!rowComplete(last)) return;
+    if (last.boxes.every(b => b.dataset.color === "green")) return;
+    const next = rankGuesses(currentCandidates())[0];
+    if (last.done) {
+        appendSolveRow(next);
+    } else if (last.word !== next) {
+        last.word = next;
+        last.boxes.forEach((b, i) => { b.textContent = next[i]; });
+    }
+}
+
+window.resetSolve = () => {
+    solverRows.length = 0;
+    solverContainer.replaceChildren();
+    window.startSolve();
+};
+
+const SAMPLE_CAP = 5000;
+const PROBE_CAP = 1700;
+
+function strideSample(arr, cap) {
+    if (arr.length <= cap) return arr;
+    const step = arr.length / cap;
+    const out = new Array(cap);
+    for (let i = 0; i < cap; i++) out[i] = arr[Math.floor(i * step)];
+    return out;
+}
+
+function rankGuesses(candidates) {
+    const candSet = new Set(candidates);
+    if (candidates.length === 2) {
+        return [candidates[0], candidates[1]];
+    }
+    const sample = strideSample(candidates, SAMPLE_CAP);
+    const played = playedWords();
+    let pool = openers.filter(w => !candSet.has(w.toUpperCase()) && !played.has(w.toUpperCase()));
+    for (const w of strideSample(candidates, PROBE_CAP - pool.length)) pool.push(w.toLowerCase());
+    const n = sample.length;
+    const logN = Math.log2(n);
+    const counts = new Int32Array(243);
+    const scored = [];
+    for (const word of pool) {
+        const g = word.toLowerCase();
+        counts.fill(0);
+        for (let i = 0; i < n; i++) counts[feedbackPattern(g, sample[i].toLowerCase())]++;
+        let H = 0;
+        let worst = 0;
+        for (let b = 0; b < 243; b++) {
+            const c = counts[b];
+            if (!c) continue;
+            H += c * (logN - Math.log2(c));
+            if (c > worst) worst = c;
+        }
+        H /= n;
+        scored.push({
+            word: word.toUpperCase(),
+            score: H + 0.001 * (candSet.has(word.toUpperCase()) ? 1 : 0) - 0.0001 * (worst / n),
+        });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map(s => s.word);
+}
+
+function feedbackPattern(guess, target) {
+    let code = 0;
+    const remaining = new Uint8Array(26);
+    for (let i = 0; i < 5; i++) remaining[target.charCodeAt(i) - 97]++;
+    for (let i = 0; i < 5; i++) {
+        if (guess[i] === target[i]) {
+            code += 2 * Math.pow(3, i);
+            remaining[target.charCodeAt(i) - 97]--;
+        }
+    }
+    for (let i = 0; i < 5; i++) {
+        if (guess[i] === target[i]) continue;
+        const c = guess.charCodeAt(i) - 97;
+        if (remaining[c] > 0) {
+            code += Math.pow(3, i);
+            remaining[c]--;
+        }
+    }
+    return code;
+}
