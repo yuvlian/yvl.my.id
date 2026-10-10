@@ -218,7 +218,7 @@ function setMode(mode) {
     document.getElementById("mode-solver").classList.toggle("active", !finder);
     document.getElementById("subtitle").textContent = finder
         ? "So you don't have to google \"5 letter word containing ... ending with ...\""
-        : "Click the letters to match the game's colors after each guess.";
+        : "This shit is borked ngl, don't bother LOL";
     if (finder) {
         updateResults();
     } else {
