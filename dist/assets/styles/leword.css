@@ -1,0 +1,161 @@
+.blume {
+    width: min(100%, 240px);
+    height: auto;
+    margin: 0 auto;
+}
+
+.page {
+    max-width: 520px;
+    margin: 0 auto;
+    gap: 3rem;
+}
+
+.page .section {
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
+
+.page h1 {
+    margin: 0.67em 0;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin: 8px 0 20px;
+}
+
+.row:last-child {
+    margin-bottom: 0;
+}
+
+#reset_button {
+    display: block;
+    width: 100%;
+    height: 41px;
+    margin: 20px 0;
+    border: 1px solid #000;
+    background: #fff;
+    color: #000;
+    font: inherit;
+    font-size: 16px;
+    border-radius: 0;
+}
+
+input.word-input {
+    margin: 0;
+    height: 45px;
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid #000;
+    border-radius: 0;
+    background: #fff;
+    color: #000;
+    font: inherit;
+    font-size: 16px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.color-grid {
+    display: flex;
+    gap: 4px;
+}
+
+.color-box {
+    width: 45px;
+    height: 45px;
+    box-sizing: border-box;
+    cursor: pointer;
+    border: 1px solid #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.color-box.unset {
+    background: #fff;
+    color: #666;
+    border-style: dashed;
+}
+
+.color-box.gray {
+    background: #bdbdbd;
+    color: #000;
+}
+
+.color-box.yellow {
+    background: #ffc400;
+    color: #000;
+}
+
+.color-box.green {
+    background: #00b300;
+    color: #fff;
+}
+
+.word-list {
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    font-family: monospace;
+    font-size: 14px;
+    background: #fff;
+    padding: 12px;
+    border: 1px solid #000;
+}
+
+.word-list::-webkit-scrollbar {
+    display: none;
+}
+
+.word-list span {
+    display: inline-block;
+    white-space: nowrap;
+    margin-right: 0;
+}
+
+@media (max-width: 600px) {
+    .page {
+        gap: 1.5rem;
+    }
+
+    .page .section {
+        text-align: center !important;
+        margin: 0 !important;
+    }
+
+    .page .section:last-child {
+        display: block;
+    }
+
+    .row {
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    #reset_button {
+        margin: 10px 0;
+    }
+
+    input.word-input {
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .color-box {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+    }
+}
