@@ -5,4 +5,4 @@
 
 !.gitignore
 !LICENSE
-!wrangler.json
+!wrangler.toml
