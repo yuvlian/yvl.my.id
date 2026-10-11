@@ -130,17 +130,12 @@ window.startQR = async function () {
         const m = (label || "").match(/^Camera\s+(\d+),\s+facing\s+(front|back)$/i);
         return m ? { n: parseInt(m[1], 10), back: m[2].toLowerCase() === "back" } : null;
     };
-    const ranked = cameras
-        .map(cam => ({ cam, info: parseName(cam.label) }))
-        .filter(p => p.info && p.info.back)
-        .sort((a, b) => b.info.n - a.info.n);
-    const defaultId = ranked[0]?.cam.id || "";
-    if (defaultId) {
-        // enumeration must succeed with named labels, or we'd be guessing
-        if (!cameras.every(c => c.label)) {
-            cameras = await QrScanner.listCameras(true).catch(() => []);
-        }
-    }
+    const cameraByName = new Map(cameras.map(c => [c.label || `Camera ${cameras.indexOf(c) + 1}`, c]));
+    const ranked = [...cameraByName.entries()]
+        .map(([name, cam]) => ({ cam, info: parseName(name) }))
+        .filter(p => p.info)
+        .sort((a, b) => (a.info.n - b.info.n) || (b.info.back - a.info.back));
+    const defaultId = (ranked[0]?.cam || cameras[0])?.id;
 
     try {
         scanner = new QrScanner(
