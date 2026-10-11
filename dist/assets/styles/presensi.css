@@ -99,6 +99,55 @@ button {
     display: none;
 }
 
+#zoom_slider {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0.5rem 0 0.625rem;
+    height: 1.0625rem;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff;
+    border: none;
+}
+
+#zoom_slider::-webkit-slider-runnable-track {
+    height: 0.0625rem;
+    background: #000;
+}
+
+#zoom_slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0;
+    border: 0;
+    background: #000;
+    margin-top: -0.34375rem;
+}
+
+#zoom_slider::-webkit-slider-thumb:active {
+    background: #000;
+}
+
+#zoom_slider::-moz-range-track {
+    height: 1px;
+    background: #000;
+}
+
+#zoom_slider::-moz-range-thumb {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0;
+    border: 0;
+    background: #000;
+}
+
+#zoom_slider:focus {
+    outline: none;
+}
+
 #notify_container {
     max-width: 520px;
     margin: 1.5rem auto 3rem;

@@ -68,7 +68,9 @@ function setupModeDropdown() {
 function setupCameraDropdown() {
     setupDropdown('mode_select_cam', 'camera_button', 'camera_list', 'camera_label', value => {
         if (scanner) {
-            scanner.setCamera(value).catch(err => {
+            scanner.setCamera(value).then(() => {
+                setupZoomSlider();
+            }).catch(err => {
                 notify(2, `Failed to switch camera: ${err}`);
             });
         }
@@ -99,8 +101,43 @@ function hideScanner() {
         scanner.stop();
     }
     document.getElementById('video').style.display = 'none';
+    document.getElementById('zoom_slider')?.remove();
     if (cameraInterface) cameraInterface.style.display = 'none';
     if (startQrButton) startQrButton.style.display = 'block';
+}
+
+async function setupZoomSlider() {
+    if (!scanner || !scanner.$video) return;
+
+    document.getElementById('zoom_slider')?.remove();
+
+    const stream = scanner.$video.srcObject;
+    if (!stream) return;
+
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+
+    const capabilities = track.getCapabilities();
+    const zoom = capabilities.zoom || { min: 100, max: 400, step: 1 };
+
+    const video = document.getElementById('video');
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = zoom.min;
+    slider.max = zoom.max;
+    slider.step = zoom.step || 0.01;
+    slider.value = zoom.min;
+    slider.id = "zoom_slider";
+    video.insertAdjacentElement("afterend", slider);
+    slider.oninput = async () => {
+        try {
+            await track.applyConstraints({
+                advanced: [{ zoom: parseFloat(slider.value) }]
+            });
+        } catch (err) {
+            notify(2, `Zoom failed: ${err}`);
+        }
+    };
 }
 
 window.startQR = async function () {
@@ -115,6 +152,7 @@ window.startQR = async function () {
         try {
             video.style.display = 'block';
             await scanner.start();
+            await setupZoomSlider();
         } catch (err) {
             notify(2, `QR init error: ${err}`);
             hideScanner();
@@ -176,6 +214,8 @@ window.startQR = async function () {
             const activeDeviceId = activeTrack ? activeTrack.getSettings().deviceId : null;
             populateCameraList(cameras, activeDeviceId);
         }
+
+        await setupZoomSlider();
     } catch (err) {
         notify(2, `QR init error: ${err}`);
         hideScanner();
