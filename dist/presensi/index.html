@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>presensi</title>
+        <meta property="og:title" content="Presensi">
+
+        <meta name="description" content="An alternative frontend for Airlangga University's presence system.">
+        <meta property="og:description" content="An alternative frontend for Airlangga University's presence system.">
+
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://yvl.my.id/presensi">
+
+        <meta name="theme-color" content="#FFFFFF">
+        <link rel="icon" type="image/x-icon" href="/assets/img/icons/favicon.ico">
+
+        <link rel="stylesheet" href="/assets/styles/index.css">
+        <link rel="stylesheet" href="/assets/styles/presensi.css">
+        <script type="module" src="/assets/js/presensi.js"></script>
+    </head>
+
+    <body>
+        <div class="page">
+            <div class="section">
+                <noscript>
+                    <div class="notify notify-error">
+                        JavaScript is required to use this page. Please enable it.
+                    </div>
+                </noscript>
+
+                <h1>Presensi.</h1>
+                <img class="apollo" src="/assets/img/page/apolloaurora-240x253.webp" alt="apollo">
+            </div>
+
+            <div class="section">
+                <div id="mode_select" class="mode-select">
+                    <button type="button" id="mode_button" aria-haspopup="listbox" aria-expanded="false" aria-controls="mode_list">
+                        <span id="mode_label">ID_MHS</span>
+                    </button>
+                    <ul id="mode_list" role="listbox" hidden>
+                        <li role="option" data-value="id" aria-selected="true" tabindex="-1">ID_MHS</li>
+                        <li role="option" data-value="userpass" aria-selected="false" tabindex="-1">Email + Password</li>
+                    </ul>
+                </div>
+
+                <div id="userpass_box" style="display:none;">
+                    <input id="username" placeholder="Email" />
+                    <input id="password" type="password" placeholder="Password" />
+                </div>
+
+                <div id="id_box" style="display:block;">
+                    <input id="id_mhs" placeholder="ID MHS" />
+                </div>
+
+                <button id="start-qr-button" onclick="startQR()">Scan a QR code with your camera</button>
+                <div id="qr-camera-interface" style="display: none;">
+                    <div id="mode_select_cam" class="mode-select">
+                        <button type="button" id="camera_button" aria-haspopup="listbox" aria-expanded="false" aria-controls="camera_list">
+                            <span id="camera_label">Camera</span>
+                        </button>
+                        <ul id="camera_list" role="listbox" hidden></ul>
+                    </div>
+                    <video id="video"></video>
+                </div>
+                <input type="file" id="qr_image_input" accept="image/*" style="display:none;">
+                <button onclick="document.getElementById('qr_image_input').click()">Scan a QR code image file</button>
+            </div>
+        </div>
+
+        <div id="notify_container"></div>
+    </body>
+
+</html>
