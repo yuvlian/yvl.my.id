@@ -1,54 +1,3 @@
-@font-face {
-  font-family: "Bitrimus";
-  src: url("/assets/fonts/Bitrimus.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "LeroyLetteringLight";
-  src: url("/assets/fonts/LeroyLetteringLight.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-body {
-  font-family: "LeroyLetteringLight", serif;
-  margin: 0;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: "Bitrimus", serif;
-  font-weight: normal;
-}
-
-h1 {
-  font-size: 2.75rem;
-}
-
-h2 {
-  font-size: 2rem;
-}
-
-a {
-  color: inherit;
-  cursor: pointer;
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-  padding: 1rem 6vw;
-}
-
 .section {
   width: 50%;
 }
@@ -69,11 +18,6 @@ a {
 }
 
 @media (max-width: 600px) {
-  .page {
-    gap: 1.5rem;
-    padding: 1rem;
-  }
-
   .section {
     text-align: left !important;
     width: 100%;
