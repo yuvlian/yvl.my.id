@@ -14,9 +14,14 @@
   font-display: swap;
 }
 
+html {
+  background-color: #ffffff;
+}
+
 body {
   font-family: "LeroyLetteringLight", serif;
   margin: 0;
+  background-color: #ffffff;
 }
 
 h1,
