@@ -344,6 +344,8 @@ window.sendData = async function () {
             token: tokenData,
             id_mhs: id_mhs,
             id_presensi_kelas: classId,
+            lang: "",
+            lat: ""
         });
         let result;
         try {
